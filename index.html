@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Avançado de Gestão de Frota</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#FF6B35',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                        info: '#3B82F6'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-truck text-primary text-3xl mr-3"></i>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900 dark:text-white">FleetControl Pro</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Sistema Avançado de Gestão de Frota</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="hidden md:block text-right">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white" id="currentDateTime"></p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Última atualização</p>
+                    </div>
+                    <div class="relative">
+                        <button id="alertBtn" class="relative p-3 text-gray-600 dark:text-gray-300 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="alertBadge" class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full h-6 w-6 flex items-center justify-center hidden animate-pulse">0</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-16 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-8 overflow-x-auto">
+                <button onclick="showTab('dashboard')" class="nav-btn py-4 px-1 border-b-2 border-primary text-primary font-medium whitespace-nowrap">
+                    <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                </button>
+                <button onclick="showTab('vehicles')" class="nav-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                    <i class="fas fa-truck mr-2"></i>Veículos
+                </button>
+                <button onclick="showTab('drivers')" class="nav-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                    <i class="fas fa-users mr-2"></i>Motoristas
+                </button>
+                <button onclick="showTab('speed-tracking')" class="nav-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                    <i class="fas fa-tachometer-alt mr-2"></i>Monitoramento
+                </button>
+                <button onclick="showTab('reports')" class="nav-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                    <i class="fas fa-chart-bar mr-2"></i>Relatórios
+                </button>
+                <button onclick="showTab('maintenance')" class="nav-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                    <i class="fas fa-wrench mr-2"></i>Manutenção
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content">
+            <!-- Quick Actions -->
+            <div class="mb-6">
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="showSpeedEntryModal()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Registrar Velocidade
+                    </button>
+                    <button onclick="showAddVehicleModal()" class="bg-success text-white px-4 py-2 rounded-lg hover:bg-success/90 transition-colors flex items-center">
+                        <i class="fas fa-truck mr-2"></i>Novo Veículo
+                    </button>
+                    <button onclick="showAddDriverModal()" class="bg-info text-white px-4 py-2 rounded-lg hover:bg-info/90 transition-colors flex items-center">
+                        <i class="fas fa-user-plus mr-2"></i>Novo Motorista
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-primary">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-truck text-primary text-3xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total de Veículos</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white" id="totalVehicles">0</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Frota ativa</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-success">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-user-check text-success text-3xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Motoristas Ativos</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white" id="activeDrivers">0</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Em serviço</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-warning">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-warning text-3xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">A Vencer</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white" id="expiringSoon">0</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Próximos 30 dias</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-danger">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-times-circle text-danger text-3xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Vencidos</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white" id="expired">0</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Requer atenção</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-chart-pie text-primary mr-2"></i>Status dos Documentos
+                    </h3>
+                    <canvas id="documentsChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-tachometer-alt text-primary mr-2"></i>Infrações por Período
+                    </h3>
+                    <canvas id="violationsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Activity and Alerts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                            <i class="fas fa-bell text-warning mr-2"></i>Alertas Prioritários
+                        </h3>
+                    </div>
+                    <div class="p-6 max-h-80 overflow-y-auto">
+                        <div id="alertsList" class="space-y-4">
+                            <!-- Alerts will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                            <i class="fas fa-clock text-info mr-2"></i>Atividade Recente
+                        </h3>
+                    </div>
+                    <div class="p-6 max-h-80 overflow-y-auto">
+                        <div id="recentActivity" class="space-y-4">
+                            <!-- Recent activity will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicles Tab -->
+        <div id="vehicles" class="tab-content hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Gestão de Veículos</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Controle completo da frota</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <input type="text" id="vehicleSearch" placeholder="Buscar veículo..." class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white text-sm">
+                        <button onclick="showAddVehicleModal()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center">
+                            <i class="fas fa-plus mr-2"></i>Adicionar Veículo
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Placa</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Modelo</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motorista</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tacógrafo</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Inspeção</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vehiclesTable" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Vehicle data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drivers Tab -->
+        <div id="drivers" class="tab-content hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Gestão de Motoristas</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Controle de CNH e qualificações</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <input type="text" id="driverSearch" placeholder="Buscar motorista..." class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white text-sm">
+                        <button onclick="showAddDriverModal()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center">
+                            <i class="fas fa-plus mr-2"></i>Adicionar Motorista
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nome</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">CNH</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Categoria</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Vencimento CNH</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Veículo Atual</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="driversTable" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Driver data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Speed Tracking Tab -->
+        <div id="speed-tracking" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Speed Entry Form -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-plus-circle text-primary mr-2"></i>Registrar Velocidade
+                    </h3>
+                    <form id="speedEntryForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Motorista</label>
+                            <select id="speedDriverSelect" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                                <option value="">Selecione um motorista</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Velocidade (km/h)</label>
+                            <input type="number" id="speedValue" min="0" max="200" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" placeholder="Ex: 85" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Limite da Via (km/h)</label>
+                            <select id="speedLimit" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                                <option value="">Selecione o limite</option>
+                                <option value="30">30 km/h</option>
+                                <option value="40">40 km/h</option>
+                                <option value="50">50 km/h</option>
+                                <option value="60">60 km/h</option>
+                                <option value="70">70 km/h</option>
+                                <option value="80">80 km/h</option>
+                                <option value="90">90 km/h</option>
+                                <option value="100">100 km/h</option>
+                                <option value="110">110 km/h</option>
+                                <option value="120">120 km/h</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data/Hora</label>
+                            <input type="datetime-local" id="speedDateTime" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Localização</label>
+                            <input type="text" id="speedLocation" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" placeholder="Ex: BR-101, KM 245" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Observações</label>
+                            <textarea id="speedObservations" rows="3" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" placeholder="Observações adicionais..."></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                            <i class="fas fa-save mr-2"></i>Registrar Velocidade
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Current Speed Status -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                            <i class="fas fa-tachometer-alt text-primary mr-2"></i>Status Atual da Frota
+                        </h3>
+                        <div id="currentSpeedStatus" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Current speed status will be populated here -->
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                            <i class="fas fa-exclamation-triangle text-warning mr-2"></i>Alertas de Velocidade
+                        </h3>
+                        <div id="speedAlerts" class="space-y-3">
+                            <!-- Speed alerts will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Speed History -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Histórico de Velocidade</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Registros de velocidade da frota</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <input type="date" id="speedHistoryDate" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white text-sm">
+                        <select id="speedHistoryDriver" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white text-sm">
+                            <option value="">Todos os motoristas</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data/Hora</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motorista</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Veículo</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Velocidade</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Limite</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Localização</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="speedHistoryTable" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Speed history will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Report Filters -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-filter text-primary mr-2"></i>Filtros
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Período</label>
+                            <select id="reportPeriod" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white">
+                                <option value="7">Últimos 7 dias</option>
+                                <option value="30">Últimos 30 dias</option>
+                                <option value="90">Últimos 3 meses</option>
+                                <option value="365">Último ano</option>
+                                <option value="custom">Período personalizado</option>
+                            </select>
+                        </div>
+                        
+                        <div id="customDateRange" class="space-y-2 hidden">
+                            <input type="date" id="reportStartDate" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white">
+                            <input type="date" id="reportEndDate" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Relatório</label>
+                            <select id="reportType" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white">
+                                <option value="general">Relatório Geral</option>
+                                <option value="speed">Infrações de Velocidade</option>
+                                <option value="maintenance">Manutenção</option>
+                                <option value="drivers">Performance dos Motoristas</option>
+                                <option value="vehicles">Status dos Veículos</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Motorista</label>
+                            <select id="reportDriver" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white">
+                                <option value="">Todos os motoristas</option>
+                            </select>
+                        </div>
+                        
+                        <button onclick="generateReport()" class="w-full bg-primary text-white px-4 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                            <i class="fas fa-chart-bar mr-2"></i>Gerar Relatório
+                        </button>
+                        
+                        <button onclick="exportReport()" class="w-full bg-success text-white px-4 py-3 rounded-lg hover:bg-success/90 transition-colors font-medium">
+                            <i class="fas fa-file-excel mr-2"></i>Exportar Excel
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Report Content -->
+                <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-chart-line text-primary mr-2"></i>Relatório
+                    </h3>
+                    <div id="reportContent" class="min-h-96">
+                        <div class="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+                            <div class="text-center">
+                                <i class="fas fa-chart-line text-6xl mb-4 text-gray-300 dark:text-gray-600"></i>
+                                <p class="text-lg font-medium">Relatórios Avançados</p>
+                                <p>Selecione os filtros e clique em "Gerar Relatório" para visualizar os dados</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Tab -->
+        <div id="maintenance" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-calendar-alt text-primary mr-2"></i>Próximas Manutenções
+                    </h3>
+                    <div id="upcomingMaintenance" class="space-y-4">
+                        <!-- Upcoming maintenance will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-exclamation-circle text-danger mr-2"></i>Manutenções Atrasadas
+                    </h3>
+                    <div id="overdueMaintenance" class="space-y-4">
+                        <!-- Overdue maintenance will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Speed Entry Modal -->
+    <div id="speedEntryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-lg w-full max-h-screen overflow-y-auto">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                <i class="fas fa-tachometer-alt text-primary mr-2"></i>Registro Rápido de Velocidade
+            </h3>
+            <form id="quickSpeedForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Motorista</label>
+                        <select id="quickSpeedDriver" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                            <option value="">Selecione</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Velocidade</label>
+                        <input type="number" id="quickSpeedValue" min="0" max="200" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Limite</label>
+                        <select id="quickSpeedLimit" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                            <option value="50">50 km/h</option>
+                            <option value="60">60 km/h</option>
+                            <option value="80" selected>80 km/h</option>
+                            <option value="100">100 km/h</option>
+                            <option value="110">110 km/h</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data/Hora</label>
+                        <input type="datetime-local" id="quickSpeedDateTime" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Localização</label>
+                    <input type="text" id="quickSpeedLocation" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" placeholder="Ex: BR-101, KM 245" required>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closeSpeedEntryModal()" class="px-6 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancelar</button>
+                    <button type="submit" class="px-6 py-3 bg-primary text-white hover:bg-primary/90 rounded-lg transition-colors font-medium">
+                        <i class="fas fa-save mr-2"></i>Registrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Vehicle Modal -->
+    <div id="addVehicleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-lg w-full max-h-screen overflow-y-auto">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                <i class="fas fa-truck text-primary mr-2"></i>Adicionar Veículo
+            </h3>
+            <form id="addVehicleForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Placa</label>
+                        <input type="text" id="vehiclePlate" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" placeholder="ABC-1234" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modelo</label>
+                        <input type="text" id="vehicleModel" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" placeholder="Ex: Volvo FH 540" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Motorista</label>
+                    <select id="vehicleDriver" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white">
+                        <option value="">Selecione um motorista</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vencimento do Tacógrafo</label>
+                        <input type="date" id="vehicleTachograph" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data da Inspeção</label>
+                        <input type="date" id="vehicleInspection" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closeAddVehicleModal()" class="px-6 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancelar</button>
+                    <button type="submit" class="px-6 py-3 bg-primary text-white hover:bg-primary/90 rounded-lg transition-colors font-medium">
+                        <i class="fas fa-save mr-2"></i>Adicionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Driver Modal -->
+    <div id="addDriverModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-lg w-full max-h-screen overflow-y-auto">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                <i class="fas fa-user-plus text-primary mr-2"></i>Adicionar Motorista
+            </h3>
+            <form id="addDriverForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome Completo</label>
+                    <input type="text" id="driverName" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" placeholder="Nome completo" required>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CNH</label>
+                        <input type="text" id="driverLicense" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" placeholder="12345678901" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoria</label>
+                        <select id="driverCategory" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                            <option value="">Selecione</option>
+                            <option value="A">A - Motocicleta</option>
+                            <option value="B">B - Carro</option>
+                            <option value="C">C - Caminhão</option>
+                            <option value="D">D - Ônibus</option>
+                            <option value="E">E - Carreta</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vencimento da CNH</label>
+                    <input type="date" id="driverLicenseExpiry" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg text-base dark:bg-gray-700 dark:text-white" required>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closeAddDriverModal()" class="px-6 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancelar</button>
+                    <button type="submit" class="px-6 py-3 bg-primary text-white hover:bg-primary/90 rounded-lg transition-colors font-medium">
+                        <i class="fas fa-save mr-2"></i>Adicionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode support
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Data storage with enhanced structure
+        let vehicles = [
+            {
+                id: 1,
+                plate: 'ABC-1234',
+                model: 'Volvo FH 540',
+                driver: 'João Silva',
+                tachographExpiry: '2024-12-15',
+                inspectionDate: '2024-06-15',
+                status: 'Em dia'
+            },
+            {
+                id: 2,
+                plate: 'DEF-5678',
+                model: 'Scania R450',
+                driver: 'Maria Santos',
+                tachographExpiry: '2024-11-20',
+                inspectionDate: '2023-05-10',
+                status: 'A vencer'
+            },
+            {
+                id: 3,
+                plate: 'GHI-9012',
+                model: 'Mercedes Actros',
+                driver: 'Pedro Costa',
+                tachographExpiry: '2024-01-15',
+                inspectionDate: '2024-08-20',
+                status: 'Vencido'
+            }
+        ];
+
+        let drivers = [
+            {
+                id: 1,
+                name: 'João Silva',
+                license: '12345678901',
+                category: 'E',
+                licenseExpiry: '2025-03-15',
+                currentVehicle: 'ABC-1234',
+                status: 'Ativo'
+            },
+            {
+                id: 2,
+                name: 'Maria Santos',
+                license: '23456789012',
+                category: 'E',
+                licenseExpiry: '2024-12-10',
+                currentVehicle: 'DEF-5678',
+                status: 'Ativo'
+            },
+            {
+                id: 3,
+                name: 'Pedro Costa',
+                license: '34567890123',
+                category: 'D',
+                licenseExpiry: '2024-06-20',
+                currentVehicle: 'GHI-9012',
+                status: 'Ativo'
+            }
+        ];
+
+        let speedRecords = [
+            {
+                id: 1,
+                datetime: '2024-01-15T14:30:00',
+                driverId: 2,
+                driverName: 'Maria Santos',
+                vehiclePlate: 'DEF-5678',
+                speed: 95,
+                speedLimit: 80,
+                location: 'BR-101, KM 245',
+                observations: 'Trecho de ultrapassagem',
+                status: 'Infração'
+            },
+            {
+                id: 2,
+                datetime: '2024-01-15T09:15:00',
+                driverId: 1,
+                driverName: 'João Silva',
+                vehiclePlate: 'ABC-1234',
+                speed: 75,
+                speedLimit: 80,
+                location: 'SP-330, KM 180',
+                observations: '',
+                status: 'Normal'
+            },
+            {
+                id: 3,
+                datetime: '2024-01-14T16:45:00',
+                driverId: 3,
+                driverName: 'Pedro Costa',
+                vehiclePlate: 'GHI-9012',
+                speed: 120,
+                speedLimit: 80,
+                location: 'BR-381, KM 125',
+                observations: 'Possível emergência',
+                status: 'Infração Grave'
+            }
+        ];
+
+        let recentActivities = [];
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDateTime();
+            updateDashboard();
+            updateAllTables();
+            updateSpeedTracking();
+            initCharts();
+            setupEventListeners();
+            populateSelects();
+            
+            // Set current datetime for forms
+            const now = new Date();
+            const currentDateTime = now.toISOString().slice(0, 16);
+            document.getElementById('speedDateTime').value = currentDateTime;
+            document.getElementById('quickSpeedDateTime').value = currentDateTime;
+        });
+
+        // Initialize date and time
+        function initializeDateTime() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = now.toLocaleString('pt-BR');
+        }
+
+        // Tab navigation
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('border-primary', 'text-primary');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            document.getElementById(tabName).classList.remove('hidden');
+            
+            event.target.classList.remove('border-transparent', 'text-gray-500');
+            event.target.classList.add('border-primary', 'text-primary');
+        }
+
+        // Update dashboard
+        function updateDashboard() {
+            document.getElementById('totalVehicles').textContent = vehicles.length;
+            document.getElementById('activeDrivers').textContent = drivers.filter(d => d.status === 'Ativo').length;
+            
+            const { expiringSoon, expired } = calculateExpirations();
+            document.getElementById('expiringSoon').textContent = expiringSoon;
+            document.getElementById('expired').textContent = expired;
+            
+            // Update alert badge
+            const totalAlerts = expiringSoon + expired + speedRecords.filter(r => r.status.includes('Infração')).length;
+            const alertBadge = document.getElementById('alertBadge');
+            if (totalAlerts > 0) {
+                alertBadge.textContent = totalAlerts;
+                alertBadge.classList.remove('hidden');
+            } else {
+                alertBadge.classList.add('hidden');
+            }
+            
+            updateAlertsList();
+            updateRecentActivity();
+        }
+
+        // Calculate expirations
+        function calculateExpirations() {
+            const today = new Date();
+            const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+            
+            let expiringSoon = 0;
+            let expired = 0;
+            
+            vehicles.forEach(vehicle => {
+                const tachographDate = new Date(vehicle.tachographExpiry);
+                const inspectionDate = new Date(vehicle.inspectionDate);
+                const inspectionExpiry = new Date(inspectionDate.getTime() + (2 * 365 * 24 * 60 * 60 * 1000));
+                
+                if (tachographDate < today || inspectionExpiry < today) {
+                    expired++;
+                } else if (tachographDate < thirtyDaysFromNow || inspectionExpiry < thirtyDaysFromNow) {
+                    expiringSoon++;
+                }
+            });
+            
+            drivers.forEach(driver => {
+                const licenseDate = new Date(driver.licenseExpiry);
+                if (licenseDate < today) {
+                    expired++;
+                } else if (licenseDate < thirtyDaysFromNow) {
+                    expiringSoon++;
+                }
+            });
+            
+            return { expiringSoon, expired };
+        }
+
+        // Update alerts list
+        function updateAlertsList() {
+            const alertsList = document.getElementById('alertsList');
+            const alerts = [];
+            const today = new Date();
+            const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+            
+            // Document expiration alerts
+            vehicles.forEach(vehicle => {
+                const tachographDate = new Date(vehicle.tachographExpiry);
+                const inspectionDate = new Date(vehicle.inspectionDate);
+                const inspectionExpiry = new Date(inspectionDate.getTime() + (2 * 365 * 24 * 60 * 60 * 1000));
+                
+                if (tachographDate < today) {
+                    alerts.push({
+                        type: 'error',
+                        icon: 'fa-exclamation-circle',
+                        message: `Tacógrafo do veículo ${vehicle.plate} está vencido`,
+                        date: vehicle.tachographExpiry,
+                        priority: 'high'
+                    });
+                } else if (tachographDate < thirtyDaysFromNow) {
+                    alerts.push({
+                        type: 'warning',
+                        icon: 'fa-exclamation-triangle',
+                        message: `Tacógrafo do veículo ${vehicle.plate} vence em breve`,
+                        date: vehicle.tachographExpiry,
+                        priority: 'medium'
+                    });
+                }
+                
+                if (inspectionExpiry < today) {
+                    alerts.push({
+                        type: 'error',
+                        icon: 'fa-exclamation-circle',
+                        message: `Inspeção do veículo ${vehicle.plate} está vencida`,
+                        date: inspectionDate.toISOString().split('T')[0],
+                        priority: 'high'
+                    });
+                } else if (inspectionExpiry < thirtyDaysFromNow) {
+                    alerts.push({
+                        type: 'warning',
+                        icon: 'fa-exclamation-triangle',
+                        message: `Inspeção do veículo ${vehicle.plate} vence em breve`,
+                        date: inspectionDate.toISOString().split('T')[0],
+                        priority: 'medium'
+                    });
+                }
+            });
+
+            // Speed violation alerts
+            const recentViolations = speedRecords.filter(record => {
+                const recordDate = new Date(record.datetime);
+                const yesterday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
+                return recordDate > yesterday && record.status.includes('Infração');
+            });
+
+            recentViolations.forEach(violation => {
+                alerts.push({
+                    type: violation.status === 'Infração Grave' ? 'error' : 'warning',
+                    icon: 'fa-tachometer-alt',
+                    message: `${violation.driverName} - Velocidade: ${violation.speed}km/h (Limite: ${violation.speedLimit}km/h)`,
+                    date: violation.datetime,
+                    priority: violation.status === 'Infração Grave' ? 'high' : 'medium'
+                });
+            });
+            
+            // Sort alerts by priority and date
+            alerts.sort((a, b) => {
+                const priorityOrder = { high: 3, medium: 2, low: 1 };
+                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                    return priorityOrder[b.priority] - priorityOrder[a.priority];
+                }
+                return new Date(b.date) - new Date(a.date);
+            });
+            
+            if (alerts.length === 0) {
+                alertsList.innerHTML = '<div class="text-center py-8"><i class="fas fa-check-circle text-success text-3xl mb-2"></i><p class="text-gray-500 dark:text-gray-400">Nenhum alerta no momento</p></div>';
+            } else {
+                alertsList.innerHTML = alerts.slice(0, 5).map(alert => `
+                    <div class="flex items-start p-4 rounded-lg border-l-4 ${alert.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-500' : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500'}">
+                        <i class="fas ${alert.icon} ${alert.type === 'error' ? 'text-red-500' : 'text-yellow-500'} mr-3 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium ${alert.type === 'error' ? 'text-red-800 dark:text-red-200' : 'text-yellow-800 dark:text-yellow-200'}">${alert.message}</p>
+                            <p class="text-xs ${alert.type === 'error' ? 'text-red-600 dark:text-red-300' : 'text-yellow-600 dark:text-yellow-300'} mt-1">
+                                ${new Date(alert.date).toLocaleString('pt-BR')}
+                            </p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Update recent activity
+        function updateRecentActivity() {
+            const recentActivity = document.getElementById('recentActivity');
+            
+            if (recentActivities.length === 0) {
+                recentActivity.innerHTML = '<div class="text-center py-8"><i class="fas fa-clock text-gray-300 dark:text-gray-600 text-3xl mb-2"></i><p class="text-gray-500 dark:text-gray-400">Nenhuma atividade recente</p></div>';
+            } else {
+                recentActivity.innerHTML = recentActivities.slice(-5).reverse().map(activity => `
+                    <div class="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas ${activity.icon} text-${activity.color} mr-3 mt-1"></i>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">${activity.message}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${new Date(activity.datetime).toLocaleString('pt-BR')}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Add activity to recent activities
+        function addRecentActivity(message, icon, color) {
+            recentActivities.push({
+                message,
+                icon,
+                color,
+                datetime: new Date().toISOString()
+            });
+            updateRecentActivity();
+        }
+
+        // Update all tables
+        function updateAllTables() {
+            updateVehiclesTable();
+            updateDriversTable();
+            updateSpeedHistoryTable();
+        }
+
+        // Update vehicles table
+        function updateVehiclesTable() {
+            const table = document.getElementById('vehiclesTable');
+            const today = new Date();
+            
+            table.innerHTML = vehicles.map(vehicle => {
+                const tachographDate = new Date(vehicle.tachographExpiry);
+                const inspectionDate = new Date(vehicle.inspectionDate);
+                const inspectionExpiry = new Date(inspectionDate.getTime() + (2 * 365 * 24 * 60 * 60 * 1000));
+                
+                let status = 'Em dia';
+                let statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200';
+                
+                if (tachographDate < today || inspectionExpiry < today) {
+                    status = 'Vencido';
+                    statusClass = 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200';
+                } else if (tachographDate < new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000)) || 
+                          inspectionExpiry < new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000))) {
+                    status = 'A vencer';
+                    statusClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200';
+                }
+                
+                return `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${vehicle.plate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${vehicle.model}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${vehicle.driver || 'Não atribuído'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${new Date(vehicle.tachographExpiry).toLocaleDateString('pt-BR')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${new Date(vehicle.inspectionDate).toLocaleDateString('pt-BR')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${status}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="editVehicle(${vehicle.id})" class="text-primary hover:text-primary/80 mr-3 transition-colors">
+                                <i class="fas fa-edit mr-1"></i>Editar
+                            </button>
+                            <button onclick="deleteVehicle(${vehicle.id})" class="text-red-600 hover:text-red-800 transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Excluir
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update drivers table
+        function updateDriversTable() {
+            const table = document.getElementById('driversTable');
+            const today = new Date();
+            
+            table.innerHTML = drivers.map(driver => {
+                const licenseDate = new Date(driver.licenseExpiry);
+                let status = 'Em dia';
+                let statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200';
+                
+                if (licenseDate < today) {
+                    status = 'CNH Vencida';
+                    statusClass = 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200';
+                } else if (licenseDate < new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000))) {
+                    status = 'CNH a vencer';
+                    statusClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200';
+                }
+                
+                return `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${driver.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${driver.license}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${driver.category}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${new Date(driver.licenseExpiry).toLocaleDateString('pt-BR')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${driver.currentVehicle || 'Nenhum'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${status}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="editDriver(${driver.id})" class="text-primary hover:text-primary/80 mr-3 transition-colors">
+                                <i class="fas fa-edit mr-1"></i>Editar
+                            </button>
+                            <button onclick="deleteDriver(${driver.id})" class="text-red-600 hover:text-red-800 transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Excluir
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update speed tracking
+        function updateSpeedTracking() {
+            updateCurrentSpeedStatus();
+            updateSpeedAlerts();
+            updateSpeedHistoryTable();
+        }
+
+        // Update current speed status
+        function updateCurrentSpeedStatus() {
+            const currentSpeedStatus = document.getElementById('currentSpeedStatus');
+            const lastRecords = getLastSpeedRecordForEachDriver();
+            
+            if (lastRecords.length === 0) {
+                currentSpeedStatus.innerHTML = '<div class="col-span-2 text-center py-8"><i class="fas fa-tachometer-alt text-gray-300 dark:text-gray-600 text-3xl mb-2"></i><p class="text-gray-500 dark:text-gray-400">Nenhum registro de velocidade</p></div>';
+            } else {
+                currentSpeedStatus.innerHTML = lastRecords.map(record => {
+                    const speedPercentage = (record.speed / record.speedLimit) * 100;
+                    let colorClass = 'bg-green-500';
+                    let statusText = 'Normal';
+                    let statusIcon = 'fa-check-circle';
+                    
+                    if (speedPercentage > 100) {
+                        colorClass = 'bg-red-500';
+                        statusText = 'Infração';
+                        statusIcon = 'fa-exclamation-circle';
+                    } else if (speedPercentage > 90) {
+                        colorClass = 'bg-yellow-500';
+                        statusText = 'Atenção';
+                        statusIcon = 'fa-exclamation-triangle';
+                    }
+                    
+                    return `
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-center mb-3">
+                                <div>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">${record.vehiclePlate}</span>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">${record.driverName}</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas ${statusIcon} ${colorClass.replace('bg-', 'text-')} mr-1"></i>
+                                    <span class="text-xs font-medium ${colorClass.replace('bg-', 'text-')}">${statusText}</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-gray-500 dark:text-gray-400">Velocidade</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">${record.speed}/${record.speedLimit} km/h</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div class="${colorClass} h-2 rounded-full transition-all duration-300" style="width: ${Math.min(speedPercentage, 100)}%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">${new Date(record.datetime).toLocaleString('pt-BR')}</p>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Get last speed record for each driver
+        function getLastSpeedRecordForEachDriver() {
+            const driverLastRecords = {};
+            
+            speedRecords.forEach(record => {
+                if (!driverLastRecords[record.driverId] || 
+                    new Date(record.datetime) > new Date(driverLastRecords[record.driverId].datetime)) {
+                    driverLastRecords[record.driverId] = record;
+                }
+            });
+            
+            return Object.values(driverLastRecords);
+        }
+
+        // Update speed alerts
+        function updateSpeedAlerts() {
+            const speedAlerts = document.getElementById('speedAlerts');
+            const recentViolations = speedRecords.filter(record => {
+                const recordDate = new Date(record.datetime);
+                const yesterday = new Date(Date.now() - (24 * 60 * 60 * 1000));
+                return recordDate > yesterday && record.status.includes('Infração');
+            });
+            
+            if (recentViolations.length === 0) {
+                speedAlerts.innerHTML = '<div class="text-center py-6"><i class="fas fa-check-circle text-success text-2xl mb-2"></i><p class="text-gray-500 dark:text-gray-400">Nenhuma infração de velocidade nas últimas 24h</p></div>';
+            } else {
+                speedAlerts.innerHTML = recentViolations.map(violation => `
+                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-exclamation-triangle text-red-500 mr-3 mt-1"></i>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-sm font-medium text-red-800 dark:text-red-200">${violation.vehiclePlate} - ${violation.driverName}</p>
+                                        <p class="text-xs text-red-600 dark:text-red-300">Velocidade: ${violation.speed} km/h (Limite: ${violation.speedLimit} km/h)</p>
+                                        <p class="text-xs text-red-600 dark:text-red-300">Local: ${violation.location}</p>
+                                    </div>
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${violation.status === 'Infração Grave' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'}">${violation.status}</span>
+                                </div>
+                                <p class="text-xs text-red-500 dark:text-red-400 mt-2">${new Date(violation.datetime).toLocaleString('pt-BR')}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Update speed history table
+        function updateSpeedHistoryTable() {
+            const table = document.getElementById('speedHistoryTable');
+            const sortedRecords = [...speedRecords].sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+            
+            table.innerHTML = sortedRecords.map(record => {
+                let statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200';
+                if (record.status === 'Infração Grave') {
+                    statusClass = 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200';
+                } else if (record.status === 'Infração') {
+                    statusClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200';
+                }
+                
+                return `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${new Date(record.datetime).toLocaleString('pt-BR')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${record.driverName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${record.vehiclePlate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${record.speed} km/h</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${record.speedLimit} km/h</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${record.location}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${record.status}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="viewSpeedRecord(${record.id})" class="text-primary hover:text-primary/80 mr-3 transition-colors">
+                                <i class="fas fa-eye mr-1"></i>Ver
+                            </button>
+                            <button onclick="deleteSpeedRecord(${record.id})" class="text-red-600 hover:text-red-800 transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Excluir
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Initialize charts
+        function initCharts() {
+            // Documents status chart
+            const ctx1 = document.getElementById('documentsChart').getContext('2d');
+            const { expiringSoon, expired } = calculateExpirations();
+            const inOrder = vehicles.length + drivers.length - expiringSoon - expired;
+            
+            new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Em dia', 'A vencer', 'Vencidos'],
+                    datasets: [{
+                        data: [inOrder, expiringSoon, expired],
+                        backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: document.documentElement.classList.contains('dark') ? '#D1D5DB' : '#374151',
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Violations chart
+            const ctx2 = document.getElementById('violationsChart').getContext('2d');
+            const violationsByDay = getViolationsByDay();
+            
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: violationsByDay.labels,
+                    datasets: [{
+                        label: 'Infrações',
+                        data: violationsByDay.data,
+                        backgroundColor: '#EF444450',
+                        borderColor: '#EF4444',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: document.documentElement.classList.contains('dark') ? '#374151' : '#E5E7EB'
+                            },
+                            ticks: {
+                                color: document.documentElement.classList.contains('dark') ? '#D1D5DB' : '#374151'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: document.documentElement.classList.contains('dark') ? '#374151' : '#E5E7EB'
+                            },
+                            ticks: {
+                                color: document.documentElement.classList.contains('dark') ? '#D1D5DB' : '#374151'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: document.documentElement.classList.contains('dark') ? '#D1D5DB' : '#374151'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Get violations by day for chart
+        function getViolationsByDay() {
+            const last7Days = [];
+            const violationCounts = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateString = date.toISOString().split('T')[0];
+                last7Days.push(date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+                
+                const violationsOnDay = speedRecords.filter(record => {
+                    const recordDate = record.datetime.split('T')[0];
+                    return recordDate === dateString && record.status.includes('Infração');
+                }).length;
+                
+                violationCounts.push(violationsOnDay);
+            }
+            
+            return { labels: last7Days, data: violationCounts };
+        }
+
+        // Populate select elements
+        function populateSelects() {
+            const driverOptions = drivers.map(driver => `<option value="${driver.id}">${driver.name}</option>`).join('');
+            
+            // Speed tracking selects
+            document.getElementById('speedDriverSelect').innerHTML = '<option value="">Selecione um motorista</option>' + driverOptions;
+            document.getElementById('quickSpeedDriver').innerHTML = '<option value="">Selecione</option>' + driverOptions;
+            document.getElementById('speedHistoryDriver').innerHTML = '<option value="">Todos os motoristas</option>' + driverOptions;
+            
+            // Vehicle form select
+            document.getElementById('vehicleDriver').innerHTML = '<option value="">Selecione um motorista</option>' + 
+                drivers.map(driver => `<option value="${driver.name}">${driver.name}</option>`).join('');
+                
+            // Report driver select
+            document.getElementById('reportDriver').innerHTML = '<option value="">Todos os motoristas</option>' + 
+                drivers.map(driver => `<option value="${driver.id}">${driver.name}</option>`).join('');
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Speed entry form
+            document.getElementById('speedEntryForm').addEventListener('submit', handleSpeedEntry);
+            document.getElementById('quickSpeedForm').addEventListener('submit', handleQuickSpeedEntry);
+            
+            // Vehicle form
+            document.getElementById('addVehicleForm').addEventListener('submit', handleAddVehicle);
+            
+            // Driver form
+            document.getElementById('addDriverForm').addEventListener('submit', handleAddDriver);
+            
+            // Search functionality
+            document.getElementById('vehicleSearch').addEventListener('input', filterVehicles);
+            document.getElementById('driverSearch').addEventListener('input', filterDrivers);
+            
+            // Report period change
+            document.getElementById('reportPeriod').addEventListener('change', toggleCustomDateRange);
+        }
+
+        // Handle speed entry
+        function handleSpeedEntry(e) {
+            e.preventDefault();
+            
+            const driverId = parseInt(document.getElementById('speedDriverSelect').value);
+            const driver = drivers.find(d => d.id === driverId);
+            const speed = parseInt(document.getElementById('speedValue').value);
+            const speedLimit = parseInt(document.getElementById('speedLimit').value);
+            const datetime = document.getElementById('speedDateTime').value;
+            const location = document.getElementById('speedLocation').value;
+            const observations = document.getElementById('speedObservations').value;
+            
+            if (!driver) {
+                showCustomDialog('Erro', 'Selecione um motorista válido.');
+                return;
+            }
+            
+            let status = 'Normal';
+            if (speed > speedLimit) {
+                const exceedPercentage = ((speed - speedLimit) / speedLimit) * 100;
+                status = exceedPercentage > 50 ? 'Infração Grave' : 'Infração';
+            }
+            
+            const newRecord = {
+                id: speedRecords.length + 1,
+                datetime: datetime,
+                driverId: driverId,
+                driverName: driver.name,
+                vehiclePlate: driver.currentVehicle || 'N/A',
+                speed: speed,
+                speedLimit: speedLimit,
+                location: location,
+                observations: observations,
+                status: status
+            };
+            
+            speedRecords.push(newRecord);
+            updateSpeedTracking();
+            updateDashboard();
+            
+            addRecentActivity(`Velocidade registrada: ${driver.name} - ${speed}km/h`, 'fa-tachometer-alt', 'primary');
+            
+            // Reset form
+            document.getElementById('speedEntryForm').reset();
+            const now = new Date();
+            document.getElementById('speedDateTime').value = now.toISOString().slice(0, 16);
+            
+            showCustomDialog('Sucesso', 'Velocidade registrada com sucesso!');
+        }
+
+        // Handle quick speed entry
+        function handleQuickSpeedEntry(e) {
+            e.preventDefault();
+            
+            const driverId = parseInt(document.getElementById('quickSpeedDriver').value);
+            const driver = drivers.find(d => d.id === driverId);
+            const speed = parseInt(document.getElementById('quickSpeedValue').value);
+            const speedLimit = parseInt(document.getElementById('quickSpeedLimit').value);
+            const datetime = document.getElementById('quickSpeedDateTime').value;
+            const location = document.getElementById('quickSpeedLocation').value;
+            
+            if (!driver) {
+                showCustomDialog('Erro', 'Selecione um motorista válido.');
+                return;
+            }
+            
+            let status = 'Normal';
+            if (speed > speedLimit) {
+                const exceedPercentage = ((speed - speedLimit) / speedLimit) * 100;
+                status = exceedPercentage > 50 ? 'Infração Grave' : 'Infração';
+            }
+            
+            const newRecord = {
+                id: speedRecords.length + 1,
+                datetime: datetime,
+                driverId: driverId,
+                driverName: driver.name,
+                vehiclePlate: driver.currentVehicle || 'N/A',
+                speed: speed,
+                speedLimit: speedLimit,
+                location: location,
+                observations: '',
+                status: status
+            };
+            
+            speedRecords.push(newRecord);
+            updateSpeedTracking();
+            updateDashboard();
+            
+            addRecentActivity(`Velocidade registrada: ${driver.name} - ${speed}km/h`, 'fa-tachometer-alt', 'primary');
+            
+            closeSpeedEntryModal();
+            showCustomDialog('Sucesso', 'Velocidade registrada com sucesso!');
+        }
+
+        // Handle add vehicle
+        function handleAddVehicle(e) {
+            e.preventDefault();
+            
+            const newVehicle = {
+                id: vehicles.length + 1,
+                plate: document.getElementById('vehiclePlate').value.toUpperCase(),
+                model: document.getElementById('vehicleModel').value,
+                driver: document.getElementById('vehicleDriver').value,
+                tachographExpiry: document.getElementById('vehicleTachograph').value,
+                inspectionDate: document.getElementById('vehicleInspection').value,
+                status: 'Em dia'
+            };
+            
+            vehicles.push(newVehicle);
+            updateVehiclesTable();
+            updateDashboard();
+            populateSelects();
+            
+            addRecentActivity(`Novo veículo adicionado: ${newVehicle.plate}`, 'fa-truck', 'success');
+            
+            closeAddVehicleModal();
+            showCustomDialog('Sucesso', 'Veículo adicionado com sucesso!');
+        }
+
+        // Handle add driver
+        function handleAddDriver(e) {
+            e.preventDefault();
+            
+            const newDriver = {
+                id: drivers.length + 1,
+                name: document.getElementById('driverName').value,
+                license: document.getElementById('driverLicense').value,
+                category: document.getElementById('driverCategory').value,
+                licenseExpiry: document.getElementById('driverLicenseExpiry').value,
+                currentVehicle: '',
+                status: 'Ativo'
+            };
+            
+            drivers.push(newDriver);
+            updateDriversTable();
+            updateDashboard();
+            populateSelects();
+            
+            addRecentActivity(`Novo motorista adicionado: ${newDriver.name}`, 'fa-user-plus', 'info');
+            
+            closeAddDriverModal();
+            showCustomDialog('Sucesso', 'Motorista adicionado com sucesso!');
+        }
+
+        // Filter functions
+        function filterVehicles(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#vehiclesTable tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function filterDrivers(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#driversTable tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        // Toggle custom date range
+        function toggleCustomDateRange(e) {
+            const customDateRange = document.getElementById('customDateRange');
+            if (e.target.value === 'custom') {
+                customDateRange.classList.remove('hidden');
+            } else {
+                customDateRange.classList.add('hidden');
+            }
+        }
+
+        // Modal functions
+        function showSpeedEntryModal() {
+            const modal = document.getElementById('speedEntryModal');
+            modal.classList.remove('hidden');
+            
+            // Set current datetime
+            const now = new Date();
+            document.getElementById('quickSpeedDateTime').value = now.toISOString().slice(0, 16);
+        }
+
+        function closeSpeedEntryModal() {
+            document.getElementById('speedEntryModal').classList.add('hidden');
+            document.getElementById('quickSpeedForm').reset();
+        }
+
+        function showAddVehicleModal() {
+            document.getElementById('addVehicleModal').classList.remove('hidden');
+        }
+
+        function closeAddVehicleModal() {
+            document.getElementById('addVehicleModal').classList.add('hidden');
+            document.getElementById('addVehicleForm').reset();
+        }
+
+        function showAddDriverModal() {
+            document.getElementById('addDriverModal').classList.remove('hidden');
+        }
+
+        function closeAddDriverModal() {
+            document.getElementById('addDriverModal').classList.add('hidden');
+            document.getElementById('addDriverForm').reset();
+        }
+
+        // Custom dialog functions
+        function showConfirmDialog(message, onConfirm) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-sm w-full mx-4">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-question-circle text-warning text-2xl mr-3"></i>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Confirmar Ação</h3>
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300 mb-6">${message}</p>
+                    <div class="flex justify-end space-x-3">
+                        <button class="cancel-btn px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancelar</button>
+                        <button class="confirm-btn px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg transition-colors">Confirmar</button>
+                    </div>
+                </div>
+            `;
+            
+            modal.querySelector('.cancel-btn').onclick = () => modal.remove();
+            modal.querySelector('.confirm-btn').onclick = () => {
+                modal.remove();
+                onConfirm();
+            };
+            
+            document.body.appendChild(modal);
+        }
+
+        function showCustomDialog(title, message) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-sm w-full mx-4">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-info-circle text-primary text-2xl mr-3"></i>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">${title}</h3>
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300 mb-6">${message}</p>
+                    <div class="flex justify-end">
+                        <button class="ok-btn px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-lg transition-colors">OK</button>
+                    </div>
+                </div>
+            `;
+            
+            modal.querySelector('.ok-btn').onclick = () => modal.remove();
+            document.body.appendChild(modal);
+        }
+
+        // CRUD operations (placeholders for future implementation)
+        function editVehicle(id) {
+            showCustomDialog('Editar Veículo', 'Funcionalidade de edição será implementada em breve.');
+        }
+
+        function deleteVehicle(id) {
+            showConfirmDialog('Tem certeza que deseja excluir este veículo?', () => {
+                vehicles = vehicles.filter(v => v.id !== id);
+                updateVehiclesTable();
+                updateDashboard();
+                addRecentActivity('Veículo excluído', 'fa-trash', 'danger');
+            });
+        }
+
+        function editDriver(id) {
+            showCustomDialog('Editar Motorista', 'Funcionalidade de edição será implementada em breve.');
+        }
+
+        function deleteDriver(id) {
+            showConfirmDialog('Tem certeza que deseja excluir este motorista?', () => {
+                drivers = drivers.filter(d => d.id !== id);
+                updateDriversTable();
+                updateDashboard();
+                populateSelects();
+                addRecentActivity('Motorista excluído', 'fa-trash', 'danger');
+            });
+        }
+
+        function viewSpeedRecord(id) {
+            const record = speedRecords.find(r => r.id === id);
+            if (record) {
+                showCustomDialog('Detalhes do Registro', `
+                    <strong>Motorista:</strong> ${record.driverName}<br>
+                    <strong>Veículo:</strong> ${record.vehiclePlate}<br>
+                    <strong>Velocidade:</strong> ${record.speed} km/h<br>
+                    <strong>Limite:</strong> ${record.speedLimit} km/h<br>
+                    <strong>Local:</strong> ${record.location}<br>
+                    <strong>Data/Hora:</strong> ${new Date(record.datetime).toLocaleString('pt-BR')}<br>
+                    ${record.observations ? `<strong>Observações:</strong> ${record.observations}` : ''}
+                `);
+            }
+        }
+
+        function deleteSpeedRecord(id) {
+            showConfirmDialog('Tem certeza que deseja excluir este registro?', () => {
+                speedRecords = speedRecords.filter(r => r.id !== id);
+                updateSpeedTracking();
+                updateDashboard();
+                addRecentActivity('Registro de velocidade excluído', 'fa-trash', 'danger');
+            });
+        }
+
+        // Generate reports
+        function generateReport() {
+            const period = document.getElementById('reportPeriod').value;
+            const type = document.getElementById('reportType').value;
+            const driverId = document.getElementById('reportDriver').value;
+            const reportContent = document.getElementById('reportContent');
+            
+            let content = `
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
+                        <h4 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                            <i class="fas fa-chart-bar text-primary mr-2"></i>
+                            ${getReportTitle(type)}
+                        </h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Período: ${getReportPeriodText(period)} ${driverId ? `• Motorista: ${drivers.find(d => d.id == driverId)?.name}` : ''}
+                        </p>
+                    </div>
+            `;
+            
+            content += generateReportContent(type, period, driverId);
+            content += '</div>';
+            
+            reportContent.innerHTML = content;
+        }
+
+        function getReportTitle(type) {
+            const titles = {
+                general: 'Relatório Geral da Frota',
+                speed: 'Relatório de Infrações de Velocidade',
+                maintenance: 'Relatório de Manutenção',
+                drivers: 'Relatório de Performance dos Motoristas',
+                vehicles: 'Relatório de Status dos Veículos'
+            };
+            return titles[type] || 'Relatório';
+        }
+
+        function getReportPeriodText(period) {
+            const periods = {
+                '7': 'Últimos 7 dias',
+                '30': 'Últimos 30 dias',
+                '90': 'Últimos 3 meses',
+                '365': 'Último ano',
+                'custom': 'Período personalizado'
+            };
+            return periods[period] || 'Período não especificado';
+        }
+
+        function generateReportContent(type, period, driverId) {
+            switch (type) {
+                case 'general':
+                    return generateGeneralReport(period, driverId);
+                case 'speed':
+                    return generateSpeedReport(period, driverId);
+                case 'maintenance':
+                    return generateMaintenanceReport(period);
+                case 'drivers':
+                    return generateDriversReport(period, driverId);
+                case 'vehicles':
+                    return generateVehiclesReport(period);
+                default:
+                    return '<p class="text-gray-500 dark:text-gray-400">Tipo de relatório não reconhecido.</p>';
+            }
+        }
+
+        function generateGeneralReport(period, driverId) {
+            const { expiringSoon, expired } = calculateExpirations();
+            const totalViolations = speedRecords.filter(r => r.status.includes('Infração')).length;
+            
+            return `
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                        <i class="fas fa-truck text-primary text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Veículos</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">${vehicles.length}</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                        <i class="fas fa-users text-success text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Motoristas</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">${drivers.length}</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                        <i class="fas fa-exclamation-triangle text-warning text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">A Vencer</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">${expiringSoon}</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                        <i class="fas fa-times-circle text-danger text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Vencidos</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">${expired}</p>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h5 class="font-medium text-gray-900 dark:text-white mb-3">Resumo de Atividades</h5>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">Total de registros de velocidade</span>
+                            <span class="font-medium text-gray-900 dark:text-white">${speedRecords.length}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">Infrações de velocidade</span>
+                            <span class="font-medium text-gray-900 dark:text-white">${totalViolations}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">Taxa de conformidade</span>
+                            <span class="font-medium text-gray-900 dark:text-white">${((speedRecords.length - totalViolations) / speedRecords.length * 100).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateSpeedReport(period, driverId) {
+            let filteredRecords = speedRecords.filter(r => r.status.includes('Infração'));
+            
+            if (driverId) {
+                filteredRecords = filteredRecords.filter(r => r.driverId == driverId);
+            }
+            
+            const graveViolations = filteredRecords.filter(r => r.status === 'Infração Grave').length;
+            const moderateViolations = filteredRecords.filter(r => r.status === 'Infração').length;
+            
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg text-center">
+                        <i class="fas fa-exclamation-circle text-red-500 text-2xl mb-2"></i>
+                        <p class="text-sm text-red-600 dark:text-red-400">Infrações Graves</p>
+                        <p class="text-2xl font-bold text-red-700 dark:text-red-300">${graveViolations}</p>
+                    </div>
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg text-center">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
+                        <p class="text-sm text-yellow-600 dark:text-yellow-400">Infrações Moderadas</p>
+                        <p class="text-2xl font-bold text-yellow-700 dark:text-yellow-300">${moderateViolations}</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                        <i class="fas fa-chart-line text-primary text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">${filteredRecords.length}</p>
+                    </div>
+                </div>
+                
+                ${filteredRecords.length > 0 ? `
+                    <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                        <h5 class="font-medium text-gray-900 dark:text-white mb-3">Últimas Infrações</h5>
+                        <div class="space-y-3">
+                            ${filteredRecords.slice(-5).reverse().map(record => `
+                                <div class="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded border-l-4 ${record.status === 'Infração Grave' ? 'border-red-500' : 'border-yellow-500'}">
+                                    <div>
+                                        <p class="font-medium text-gray-900 dark:text-white">${record.driverName} - ${record.vehiclePlate}</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">${record.location} • ${new Date(record.datetime).toLocaleString('pt-BR')}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-medium text-gray-900 dark:text-white">${record.speed}/${record.speedLimit} km/h</p>
+                                        <span class="text-xs px-2 py-1 rounded-full ${record.status === 'Infração Grave' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'}">${record.status}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : '<p class="text-gray-500 dark:text-gray-400 text-center py-8">Nenhuma infração encontrada no período selecionado.</p>'}
+            `;
+        }
+
+        function generateMaintenanceReport(period) {
+            return `
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg text-center">
+                    <i class="fas fa-wrench text-yellow-500 text-3xl mb-3"></i>
+                    <h5 class="font-medium text-gray-900 dark:text-white mb-2">Módulo em Desenvolvimento</h5>
+                    <p class="text-gray-600 dark:text-gray-400">O relatório de manutenção será implementado em breve.</p>
+                </div>
+            `;
+        }
+
+        function generateDriversReport(period, driverId) {
+            let reportDrivers = driverId ? drivers.filter(d => d.id == driverId) : drivers;
+            
+            return `
+                <div class="space-y-4">
+                    ${reportDrivers.map(driver => {
+                        const driverRecords = speedRecords.filter(r => r.driverId === driver.id);
+                        const violations = driverRecords.filter(r => r.status.includes('Infração'));
+                        const complianceRate = driverRecords.length > 0 ? ((driverRecords.length - violations.length) / driverRecords.length * 100) : 100;
+                        
+                        return `
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h5 class="font-medium text-gray-900 dark:text-white">${driver.name}</h5>
+                                    <span class="text-sm px-2 py-1 rounded-full ${complianceRate >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : complianceRate >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200' : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'}">
+                                        ${complianceRate.toFixed(1)}% conformidade
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="text-center">
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Registros</p>
+                                        <p class="text-lg font-bold text-gray-900 dark:text-white">${driverRecords.length}</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Infrações</p>
+                                        <p class="text-lg font-bold text-gray-900 dark:text-white">${violations.length}</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Veículo</p>
+                                        <p class="text-lg font-bold text-gray-900 dark:text-white">${driver.currentVehicle || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function generateVehiclesReport(period) {
+            return `
+                <div class="space-y-4">
+                    ${vehicles.map(vehicle => {
+                        const today = new Date();
+                        const tachographDate = new Date(vehicle.tachographExpiry);
+                        const inspectionDate = new Date(vehicle.inspectionDate);
+                        const inspectionExpiry = new Date(inspectionDate.getTime() + (2 * 365 * 24 * 60 * 60 * 1000));
+                        
+                        let overallStatus = 'Em dia';
+                        let statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200';
+                        
+                        if (tachographDate < today || inspectionExpiry < today) {
+                            overallStatus = 'Vencido';
+                            statusClass = 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200';
+                        } else if (tachographDate < new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000)) || 
+                                  inspectionExpiry < new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000))) {
+                            overallStatus = 'A vencer';
+                            statusClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200';
+                        }
+                        
+                        return `
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <div class="flex justify-between items-center mb-3">
+                                    <div>
+                                        <h5 class="font-medium text-gray-900 dark:text-white">${vehicle.plate}</h5>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">${vehicle.model}</p>
+                                    </div>
+                                    <span class="text-sm px-2 py-1 rounded-full ${statusClass}">${overallStatus}</span>
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Motorista</p>
+                                        <p class="font-medium text-gray-900 dark:text-white">${vehicle.driver || 'Não atribuído'}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Tacógrafo</p>
+                                        <p class="font-medium text-gray-900 dark:text-white">${new Date(vehicle.tachographExpiry).toLocaleDateString('pt-BR')}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Inspeção</p>
+                                        <p class="font-medium text-gray-900 dark:text-white">${new Date(vehicle.inspectionDate).toLocaleDateString('pt-BR')}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        // Export report
+        function exportReport() {
+            showCustomDialog('Exportar Relatório', 'Funcionalidade de exportação será implementada em breve.');
+        }
+    </script>
+</body>
+</html>
